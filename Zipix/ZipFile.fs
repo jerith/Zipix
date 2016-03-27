@@ -4,8 +4,8 @@ open System.IO
 open System.Text
 
 
-let IBM437 = System.Text.Encoding.GetEncoding("IBM437")
-let UTF8 = System.Text.Encoding.UTF8
+let IBM437 = Encoding.GetEncoding("IBM437")
+let UTF8 = Encoding.UTF8
 
 
 module LocalFileHeader =
