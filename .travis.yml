@@ -3,4 +3,4 @@ solution: Zipix.sln
 
 script:
   - xbuild /nologo
-  - mono --debug ./packages/NUnit.Runners.*/tools/nunit-console.exe ./ZipixTest/bin/Debug/ZipixTest.dll -nologo -labels
+  - MONO_PATH=packages/NUnit.2.6.4/lib mono --debug ./packages/NUnit.Runners.*/tools/nunit-console.exe ./ZipixTest/bin/Debug/ZipixTest.dll -nologo -labels
