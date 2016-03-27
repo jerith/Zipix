@@ -1,0 +1,6 @@
+language: csharp
+solution: Zipix.sln
+
+script:
+  - xbuild /nologo
+  - mono --debug ./packages/NUnit.Runners.*/tools/nunit-console.exe ./ZipixTest/bin/Debug/ZipixTest.dll -nologo -labels
