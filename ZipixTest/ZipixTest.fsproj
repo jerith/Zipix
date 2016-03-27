@@ -46,10 +46,10 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="FsCheck.NUnit">
-      <HintPath>..\packages\FsCheck.NUnit.2.2.4\lib\net45\FsCheck.NUnit.dll</HintPath>
+      <HintPath>..\packages\FsCheck.Nunit.2.2.4\lib\net45\FsCheck.NUnit.dll</HintPath>
     </Reference>
     <Reference Include="FsCheck.NUnit.Addin">
-      <HintPath>..\packages\FsCheck.NUnit.2.2.4\lib\net45\FsCheck.NUnit.Addin.dll</HintPath>
+      <HintPath>..\packages\FsCheck.Nunit.2.2.4\lib\net45\FsCheck.NUnit.Addin.dll</HintPath>
     </Reference>
     <Reference Include="nunit.core">
       <HintPath>..\packages\NUnit.Runners.2.6.4\tools\lib\nunit.core.dll</HintPath>
