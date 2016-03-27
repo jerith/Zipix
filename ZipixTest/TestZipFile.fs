@@ -30,7 +30,9 @@ module FileData =
         }
 
     let mkLocalFileHeader path fd =
-        let filename = String.concat "/" [path; fd.filename]
+        let filename =
+            String.concat "/" [path; fd.filename]
+            |> bytesOfString fd.encoding
         {
             LFH.signature = LFH.SIGNATURE
             LFH.versionExtract = fd.versionExtract
@@ -41,14 +43,16 @@ module FileData =
             LFH.crc32 = fd.crc32
             LFH.sizeCompressed = Array.length fd.data |> uint32
             LFH.sizeUncompressed = fd.sizeUncompressed
-            LFH.fnLength = String.length filename |> uint16
+            LFH.fnLength = Array.length filename |> uint16
             LFH.efLength = Array.length fd.extra |> uint16
-            LFH.filename = bytesOfString fd.encoding filename
+            LFH.filename = filename
             LFH.extra = fd.extra
             }
 
     let mkCentralFileHeader path offset fd =
-        let filename = String.concat "/" [path; fd.filename]
+        let filename =
+            String.concat "/" [path; fd.filename]
+            |> bytesOfString fd.encoding
         {
             CFH.signature = CFH.SIGNATURE
             CFH.versionMadeBy = fd.versionMadeBy
@@ -60,14 +64,14 @@ module FileData =
             CFH.crc32 = fd.crc32
             CFH.sizeCompressed = Array.length fd.data |> uint32
             CFH.sizeUncompressed = fd.sizeUncompressed
-            CFH.fnLength = String.length filename |> uint16
+            CFH.fnLength = Array.length filename |> uint16
             CFH.efLength = Array.length fd.extra |> uint16
             CFH.fcLength = String.length fd.comment |> uint16
             CFH.diskNumberStart = 0us
             CFH.internalAttrs = fd.internalAttrs
             CFH.externalAttrs = fd.externalAttrs
             CFH.relativeOffset = offset
-            CFH.filename = bytesOfString fd.encoding filename
+            CFH.filename = filename
             CFH.extra = fd.extra
             CFH.comment = bytesOfString fd.encoding fd.comment
             }
@@ -98,7 +102,6 @@ module ZipGen =
 
     let genFilename enc =
         Gen.choose (1, 255)
-        // Gen.choose (97, 122)
         |> Gen.map byte
         |> Gen.suchThat ((<>) 0x2fuy)
         |> Gen.arrayOf
@@ -185,10 +188,8 @@ module ZipGen =
     type Arb =
         static member MaybeString =
             Arb.fromGen <| Gen.map MaybeString (genMaybeString FTE_IBM437)
-        // static member FileTree =
-        //     Arb.fromGen (Arb.generate<FTEncoding> >>= genFileTree)
         static member FileTree =
-            Arb.fromGen <| genFileTree FTE_IBM437
+            Arb.fromGen (Arb.generate<FTEncoding> >>= genFileTree)
 
 
 let rec walkFST fFile fDir fst =
