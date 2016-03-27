@@ -1,0 +1,5 @@
+build:
+  project: Zipix.sln
+
+before_build:
+  - nuget restore
