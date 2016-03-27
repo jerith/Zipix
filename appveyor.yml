@@ -3,3 +3,9 @@ build:
 
 before_build:
   - nuget restore
+
+after_build:
+  - copy packages\NUnit.2.6.4\lib\nunit.framework.dll ZipixTest\bin\Debug\
+
+test_script:
+  - nunit-console /framework:net-4.5 ZipixTest\bin\Debug\ZipixTest.dll
