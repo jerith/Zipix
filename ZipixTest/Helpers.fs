@@ -3,6 +3,7 @@ module ZipixTest.Helpers
 
 open System.IO
 open FsCheck
+open FsCheck.NUnit
 open Zipix
 
 module ZF = ZipFile
@@ -104,7 +105,7 @@ module ZipGen =
     let genFilename enc =
         genEncodedString enc
         |> Gen.suchThat notnull
-        |> Gen.map (Array.ofSeq >> (Array.filter ((=) '/')) >> System.String)
+        |> Gen.map (fun s -> String.concat "" <| s.Split('/'))
         |> Gen.suchThat (String.length >> ((<) 0))
 
     let genMaybeString enc =
@@ -190,6 +191,11 @@ module ZipGen =
         static member FileTree =
             Arb.fromGen (Arb.generate<FTEncoding> >>= genFileTree)
 
+
+/// Our own [<Property>] attribute so we don't have to keep passing our Arb
+/// class in.
+type ZipixPropertyAttribute() =
+    inherit PropertyAttribute(Arbitrary=[|typeof<ZipGen.Arb>|])
 
 
 let rec walkFST fFile fDir fst =

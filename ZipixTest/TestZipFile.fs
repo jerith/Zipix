@@ -2,7 +2,6 @@ module ZipixTest.TestZipFile
 
 open System.IO
 open FsCheck
-open FsCheck.NUnit
 open Zipix
 open ZipixTest.Helpers
 
@@ -20,7 +19,7 @@ let processFileTree ft f zipComment =
     processZip (mkZip ft zipComment) f
 
 
-[<Property(Arbitrary=[|typeof<ZipGen.Arb>|])>]
+[<ZipixProperty>]
 let test_copyRecords_identity (ft: FileTree) (MaybeString zipComment) =
     "copyRecords makes an exact copy of a valid zipfile" @|
         let zdIn = mkZip ft zipComment
