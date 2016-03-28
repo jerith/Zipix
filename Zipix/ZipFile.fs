@@ -259,9 +259,9 @@ type t = {
 
 
 type zipheader =
-    | LocalFile of LocalFileHeader.t
-    | CentralFile of CentralFileHeader.t
-    | CentralEnd of CentralEndHeader.t
+    | H_LocalFile of LocalFileHeader.t
+    | H_CentralFile of CentralFileHeader.t
+    | H_CentralEnd of CentralEndHeader.t
 
 
 let ofStream (stream: Stream) = {
@@ -283,76 +283,148 @@ let skip n zipfile =
     ignore <| zipfile.stream.Seek(n, SeekOrigin.Current)
 
 
-let readHeader zipfile =
+let zipReader zipfile =
     match zipfile.reader with
     | None -> failwith "ZipFile is write-only."
-    | Some reader ->
-        let sg = reader.ReadUInt32()
-        match sg with
-        | LocalFileHeader.SIGNATURE ->
-            LocalFile <| LocalFileHeader.read sg reader
-        | CentralFileHeader.SIGNATURE ->
-            CentralFile <| CentralFileHeader.read sg reader
-        | CentralEndHeader.SIGNATURE ->
-            CentralEnd <| CentralEndHeader.read sg reader
-        | _ -> failwith <| sprintf "Unexpected signature: %08x" sg
+    | Some reader -> reader
+
+
+let zipWriter zipfile =
+    match zipfile.writer with
+    | None -> failwith "ZipFile is read-only."
+    | Some writer -> writer
+
+
+let readHeader zipfile =
+    let reader = zipReader zipfile
+    let sg = reader.ReadUInt32()
+    match sg with
+    | LocalFileHeader.SIGNATURE ->
+        H_LocalFile <| LocalFileHeader.read sg reader
+    | CentralFileHeader.SIGNATURE ->
+        H_CentralFile <| CentralFileHeader.read sg reader
+    | CentralEndHeader.SIGNATURE ->
+        H_CentralEnd <| CentralEndHeader.read sg reader
+    | _ -> failwith <| sprintf "Unexpected signature: %08x" sg
 
 
 let rec readHeaders zipfile =
     match readHeader zipfile with
-    | LocalFile h ->
+    | H_LocalFile h ->
         printfn "LFH: %08x %s" h.signature (stringOfBytes IBM437 h.filename)
         skip (int64 h.sizeCompressed) zipfile
         readHeaders zipfile
-    | CentralFile h ->
+    | H_CentralFile h ->
         printfn "CFH: %08x %s" h.signature (stringOfBytes IBM437 h.filename)
         readHeaders zipfile
-    | CentralEnd h ->
+    | H_CentralEnd h ->
         printfn "CEH: %08x %s" h.signature (stringOfBytes IBM437 h.comment)
         let eof = zipfile.stream.Position = zipfile.stream.Length
         printfn "Done. (eof: %b)" eof
 
 
 let writeHeader zipfile header =
-    match zipfile.writer with
-    | None -> failwith "ZipFile is read-only."
-    | Some writer ->
-        match header with
-        | LocalFile h -> LocalFileHeader.write writer h
-        | CentralFile h -> CentralFileHeader.write writer h
-        | CentralEnd h -> CentralEndHeader.write writer h
+    let writer = zipWriter zipfile
+    match header with
+    | H_LocalFile h -> LocalFileHeader.write writer h
+    | H_CentralFile h -> CentralFileHeader.write writer h
+    | H_CentralEnd h -> CentralEndHeader.write writer h
+
+
+let copyBytesRW (reader: BinaryReader) (writer: BinaryWriter) length =
+    let buf = Array.zeroCreate<byte> 4096
+    let rec copyBytes' remaining =
+        match remaining with
+        | 0u -> ()
+        | _ ->
+            let read = reader.Read(buf, 0, min (int remaining) 4096)
+            writer.Write(buf, 0, read)
+            copyBytes' (remaining - uint32 read)
+    copyBytes' length
 
 
 let copyBytes zipIn zipOut length =
     match zipIn.reader, zipOut.writer with
-    | Some reader, Some writer ->
-        let buf = Array.zeroCreate<byte> 4096
-        let rec copyBytes' remaining =
-            match remaining with
-            | 0u -> ()
-            | _ ->
-                let read = reader.Read(buf, 0, min (int remaining) 4096)
-                writer.Write(buf, 0, read)
-                copyBytes' (remaining - uint32 read)
-        copyBytes' length
+    | Some reader, Some writer -> copyBytesRW reader writer length
     | _ -> failwith "Can't copy bytes."
 
 
-let rec copyRecords zipIn zipOut =
+type ZipFileStream(reader: BinaryReader, length: int64) =
+    inherit Stream()
+
+    let mutable position = 0L
+
+    let unsup () = raise (System.NotSupportedException())
+
+    // Inherited things we need to override.
+
+    override this.CanRead = true
+    override this.CanSeek = false
+    override this.CanWrite = false
+
+    override this.Length = length
+
+    override this.Position
+        with get() = position
+        and set(_) = unsup ()
+
+    override this.Flush() = ()
+
+    override this.Read(buffer: byte[], offset: int, count: int) =
+        let count = min (int64 count) (length - position) |> int
+        let read = reader.Read(buffer, offset, count)
+        position <- position + int64 read
+        read
+
+    override this.Seek(offset: int64, origin: SeekOrigin) = unsup ()
+    override this.SetLength(value: int64) = unsup ()
+    override this.Write(buffer: byte [], offset: int, count: int) = unsup ()
+
+    // Our own things.
+
+    member this.CopyTo(writer) =
+        copyBytesRW reader writer <| uint32 (length - position)
+        position <- length
+
+    member this.CopyTo(zipfile) =
+        this.CopyTo(zipWriter zipfile)
+
+
+type ziprecord =
+    | LocalFile of LocalFileHeader.t * ZipFileStream
+    | CentralFile of CentralFileHeader.t
+    | CentralEnd of CentralEndHeader.t
+
+
+let rec readRecords zipIn = seq {
     match readHeader zipIn with
-    | LocalFile h as header->
-        // printfn "LFH: %08x %s" h.signature (stringOfBytes IBM437 h.filename)
-        writeHeader zipOut header
-        copyBytes zipIn zipOut h.sizeCompressed
-        copyRecords zipIn zipOut
-    | CentralFile h as header ->
-        // printfn "CFH: %08x %s" h.signature (stringOfBytes IBM437 h.filename)
-        // printfn "CFH: %A" h
-        writeHeader zipOut header
-        copyRecords zipIn zipOut
-    | CentralEnd h as header ->
-        // printfn "CEH: %A" h
-        writeHeader zipOut header
+    | H_LocalFile h ->
+        let st = new ZipFileStream(zipReader zipIn, int64 h.sizeCompressed)
+        yield LocalFile (h, st)
+        yield! readRecords zipIn
+    | H_CentralFile h ->
+        yield CentralFile h
+        yield! readRecords zipIn
+    | H_CentralEnd h ->
+        yield CentralEnd h
         let eof = zipIn.stream.Position = zipIn.stream.Length
         if not eof then failwith "File continues past end of zip data."
-        // printfn "Done. (eof: %b)" eof
+    }
+
+
+let writeRecords zipOut records =
+    let writeRecord =
+        function
+        | LocalFile (h, st) ->
+            writeHeader zipOut (H_LocalFile h)
+            st.CopyTo(zipOut)
+        | CentralFile h ->
+            writeHeader zipOut (H_CentralFile h)
+        | CentralEnd h ->
+            writeHeader zipOut (H_CentralEnd h)
+    records |> Seq.iter writeRecord
+
+
+let copyRecords zipIn zipOut =
+    readRecords zipIn
+    |> writeRecords zipOut
