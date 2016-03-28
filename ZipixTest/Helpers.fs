@@ -33,9 +33,7 @@ module FileData =
         }
 
     let mkLocalFileHeader path fd =
-        let filename =
-            String.concat "/" [path; fd.filename]
-            |> ZF.bytesOfString fd.encoding
+        let filename = ZF.bytesOfString fd.encoding path
         {
             LFH.signature = LFH.SIGNATURE
             LFH.versionExtract = fd.versionExtract
@@ -53,9 +51,7 @@ module FileData =
             }
 
     let mkCentralFileHeader path offset fd =
-        let filename =
-            String.concat "/" [path; fd.filename]
-            |> ZF.bytesOfString fd.encoding
+        let filename = ZF.bytesOfString fd.encoding path
         {
             CFH.signature = CFH.SIGNATURE
             CFH.versionMadeBy = fd.versionMadeBy
@@ -94,6 +90,8 @@ type MaybeString = MaybeString of string
 
 module ZipGen =
 
+    let notnull = function null -> false | _ -> true
+
     let genEncodedString =
         function
         | FTE_UTF8 -> Arb.generate<string>
@@ -104,12 +102,10 @@ module ZipGen =
             |> Gen.map (ZF.stringOfBytes ZF.IBM437)
 
     let genFilename enc =
-        Gen.choose (1, 255)
-        |> Gen.map byte
-        |> Gen.suchThat ((<>) 0x2fuy)
-        |> Gen.arrayOf
-        |> Gen.suchThat (Array.length >> (<) 0)
-        |> Gen.map (ZF.stringOfBytes ZF.IBM437)
+        genEncodedString enc
+        |> Gen.suchThat notnull
+        |> Gen.map (Array.ofSeq >> (Array.filter ((=) '/')) >> System.String)
+        |> Gen.suchThat (String.length >> ((<) 0))
 
     let genMaybeString enc =
         Gen.oneof [Gen.constant ""; genEncodedString enc]
@@ -120,7 +116,7 @@ module ZipGen =
     let genSharedData enc = gen {
         let encoding, flags =
             match enc with
-            | FTE_UTF8 -> (ZF.UTF8, uint16 (1 <<< 11))
+            | FTE_UTF8 -> (ZF.UTF8, ZF.ENCODING_FLAG_VALUE)
             | FTE_IBM437 -> (ZF.IBM437, 0x0000us)
         let! modifiedTime = Arb.generate<uint16>
         let! modifiedDate = Arb.generate<uint16>

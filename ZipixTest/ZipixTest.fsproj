@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers.fs" />
+    <Compile Include="TestHelpers.fs" />
     <Compile Include="TestZipFile.fs" />
     <Compile Include="FsCheckAddin.fs" />
   </ItemGroup>

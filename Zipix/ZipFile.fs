@@ -7,6 +7,9 @@ open System.Text
 let IBM437 = Encoding.GetEncoding("IBM437")
 let UTF8 = Encoding.UTF8
 
+[<Literal>]
+let ENCODING_FLAG_VALUE = 0x0800us  // 1 <<< 11
+
 
 module LocalFileHeader =
     [<Literal>]
