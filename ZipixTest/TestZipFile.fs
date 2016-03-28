@@ -3,20 +3,26 @@ module ZipixTest.TestZipFile
 open System.IO
 open FsCheck
 open FsCheck.NUnit
-open Zipix.ZipFile
+open Zipix
 open ZipixTest.Helpers
 
 
-// [<Property(Arbitrary=[|typeof<ZipGen.Arb>|], MaxTest=2, EndSize=10)>]
-[<Property(Arbitrary=[|typeof<ZipGen.Arb>|])>]
-let testLocalFile (ft: FileTree) (MaybeString zipComment) =
-    let zipdata = mkZip ft zipComment
-    let zipIn = ofStream <| new MemoryStream(zipdata, false)
+let processZip zipdata f =
+    let zipIn = ZipFile.ofStream <| new MemoryStream(zipdata, false)
     use ms = new MemoryStream()
-    let zipOut = ofStream ms
-
-    copyRecords zipIn zipOut
+    let zipOut = ZipFile.ofStream ms
+    f zipIn zipOut
     ms.Close()
-    let copiedZip = ms.ToArray()
+    ms.ToArray()
 
-    zipdata = copiedZip
+
+let processFileTree ft f zipComment =
+    processZip (mkZip ft zipComment) f
+
+
+[<Property(Arbitrary=[|typeof<ZipGen.Arb>|])>]
+let test_copyRecords_identity (ft: FileTree) (MaybeString zipComment) =
+    "copyRecords makes an exact copy of a valid zipfile" @|
+        let zdIn = mkZip ft zipComment
+        let zdOut = processZip zdIn ZipFile.copyRecords
+        zdIn = zdOut

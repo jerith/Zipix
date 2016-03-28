@@ -3,12 +3,15 @@ module ZipixTest.Helpers
 
 open System.IO
 open FsCheck
-open Zipix.ZipFile
+open Zipix
+
+module ZF = ZipFile
+module LFH = ZF.LocalFileHeader
+module CFH = ZF.CentralFileHeader
+module CEH = ZF.CentralEndHeader
 
 
 module FileData =
-    module LFH = LocalFileHeader
-    module CFH = CentralFileHeader
 
     type t = {
         encoding : System.Text.Encoding
@@ -32,7 +35,7 @@ module FileData =
     let mkLocalFileHeader path fd =
         let filename =
             String.concat "/" [path; fd.filename]
-            |> bytesOfString fd.encoding
+            |> ZF.bytesOfString fd.encoding
         {
             LFH.signature = LFH.SIGNATURE
             LFH.versionExtract = fd.versionExtract
@@ -52,7 +55,7 @@ module FileData =
     let mkCentralFileHeader path offset fd =
         let filename =
             String.concat "/" [path; fd.filename]
-            |> bytesOfString fd.encoding
+            |> ZF.bytesOfString fd.encoding
         {
             CFH.signature = CFH.SIGNATURE
             CFH.versionMadeBy = fd.versionMadeBy
@@ -73,7 +76,7 @@ module FileData =
             CFH.relativeOffset = offset
             CFH.filename = filename
             CFH.extra = fd.extra
-            CFH.comment = bytesOfString fd.encoding fd.comment
+            CFH.comment = ZF.bytesOfString fd.encoding fd.comment
             }
 
 
@@ -98,7 +101,7 @@ module ZipGen =
             Gen.choose (1, 255)
             |> Gen.map byte
             |> Gen.arrayOf
-            |> Gen.map (stringOfBytes IBM437)
+            |> Gen.map (ZF.stringOfBytes ZF.IBM437)
 
     let genFilename enc =
         Gen.choose (1, 255)
@@ -106,7 +109,7 @@ module ZipGen =
         |> Gen.suchThat ((<>) 0x2fuy)
         |> Gen.arrayOf
         |> Gen.suchThat (Array.length >> (<) 0)
-        |> Gen.map (stringOfBytes IBM437)
+        |> Gen.map (ZF.stringOfBytes ZF.IBM437)
 
     let genMaybeString enc =
         Gen.oneof [Gen.constant ""; genEncodedString enc]
@@ -117,8 +120,8 @@ module ZipGen =
     let genSharedData enc = gen {
         let encoding, flags =
             match enc with
-            | FTE_UTF8 -> (UTF8, uint16 (1 <<< 11))
-            | FTE_IBM437 -> (IBM437, 0x0000us)
+            | FTE_UTF8 -> (ZF.UTF8, uint16 (1 <<< 11))
+            | FTE_IBM437 -> (ZF.IBM437, 0x0000us)
         let! modifiedTime = Arb.generate<uint16>
         let! modifiedDate = Arb.generate<uint16>
         let! filename = genFilename enc
@@ -239,26 +242,26 @@ let mkZip ft comment =
     // the local header in the zipfile.
     let writeLocal (path, fd) =
         let offset = writer.BaseStream.Position |> uint32
-        LocalFileHeader.write writer <| FileData.mkLocalFileHeader path fd
+        LFH.write writer <| FileData.mkLocalFileHeader path fd
         writer.Write(fd.data)
         FileData.mkCentralFileHeader path offset fd
 
     let centralHeaders = flattenWithPaths ft |> Seq.map writeLocal
     let centralOffset = writer.BaseStream.Position |> uint32
     let entryCount = Seq.length centralHeaders |> uint16
-    centralHeaders |> Seq.iter (CentralFileHeader.write writer)
+    centralHeaders |> Seq.iter (CFH.write writer)
     let centralSize = (writer.BaseStream.Position |> uint32) - centralOffset
     let centralEnd = {
-        CentralEndHeader.signature = CentralEndHeader.SIGNATURE
-        CentralEndHeader.diskNumber = 0us
-        CentralEndHeader.startDiskNumber = 0us
-        CentralEndHeader.entryCountDisk = entryCount
-        CentralEndHeader.entryCountTotal = entryCount
-        CentralEndHeader.sizeCentralDirectory = centralSize
-        CentralEndHeader.offsetCentralDirectory = centralOffset
-        CentralEndHeader.zcLength = String.length comment |> uint16
-        CentralEndHeader.comment = bytesOfString IBM437 comment
+        CEH.signature = CEH.SIGNATURE
+        CEH.diskNumber = 0us
+        CEH.startDiskNumber = 0us
+        CEH.entryCountDisk = entryCount
+        CEH.entryCountTotal = entryCount
+        CEH.sizeCentralDirectory = centralSize
+        CEH.offsetCentralDirectory = centralOffset
+        CEH.zcLength = String.length comment |> uint16
+        CEH.comment = ZF.bytesOfString ZF.IBM437 comment
         }
-    CentralEndHeader.write writer centralEnd
+    CEH.write writer centralEnd
     writer.Close()
     ms.ToArray()
