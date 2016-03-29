@@ -93,8 +93,7 @@ module ZipGen =
 
     let notnull = function null -> false | _ -> true
 
-    let genEncodedString =
-        function
+    let genEncodedString = function
         | FTE_UTF8 -> Arb.generate<string>
         | FTE_IBM437 ->
             Gen.choose (1, 255)
@@ -163,7 +162,7 @@ module ZipGen =
 
     let genDirData enc = gen {
         let! shared = genSharedData enc
-        let externalAttrs = shared.externalAttrs ||| 0x20u
+        let externalAttrs = shared.externalAttrs ||| 0x10u
         return { shared with externalAttrs = externalAttrs }
         }
 
@@ -248,7 +247,12 @@ let mkZip ft comment =
         writer.Write(fd.data)
         FileData.mkCentralFileHeader path offset fd
 
-    let centralHeaders = flattenWithPaths ft |> Seq.map writeLocal
+    // We use a list instead of a seq so that we don't write local records
+    // multiple times.
+    let centralHeaders =
+        flattenWithPaths ft
+        |> List.ofSeq
+        |> List.map writeLocal
     let centralOffset = writer.BaseStream.Position |> uint32
     let entryCount = Seq.length centralHeaders |> uint16
     centralHeaders |> Seq.iter (CFH.write writer)

@@ -80,6 +80,9 @@ module LocalFileHeader =
         writer.Write(h.filename)
         writer.Write(h.extra)
 
+    let size h =
+        30 + (int h.fnLength) + (int h.efLength)
+
 
 module CentralFileHeader =
     [<Literal>]
@@ -183,6 +186,9 @@ module CentralFileHeader =
         writer.Write(h.extra)
         writer.Write(h.comment)
 
+    let size h =
+        46 + (int h.fnLength) + (int h.efLength) + (int h.fcLength)
+
 
 module CentralEndHeader =
     [<Literal>]
@@ -244,6 +250,9 @@ module CentralEndHeader =
         writer.Write(h.offsetCentralDirectory)
         writer.Write(h.zcLength)
         writer.Write(h.comment)
+
+    let size h =
+        22 + (int h.zcLength)
 
 
 let stringOfBytes (encoding: Encoding) bytes = encoding.GetString(bytes)
@@ -331,16 +340,21 @@ let writeHeader zipfile header =
     | H_CentralEnd h -> CentralEndHeader.write writer h
 
 
-let copyBytesRW (reader: BinaryReader) (writer: BinaryWriter) length =
+let consumeBytes (reader: BinaryReader) send length =
     let buf = Array.zeroCreate<byte> 4096
-    let rec copyBytes' remaining =
+    let rec consumeBytes' remaining =
         match remaining with
         | 0u -> ()
         | _ ->
             let read = reader.Read(buf, 0, min (int remaining) 4096)
-            writer.Write(buf, 0, read)
-            copyBytes' (remaining - uint32 read)
-    copyBytes' length
+            send buf read
+            consumeBytes' (remaining - uint32 read)
+    consumeBytes' length
+
+
+let copyBytesRW reader (writer: BinaryWriter) length =
+    let send (buf: byte[]) read = writer.Write(buf, 0, read)
+    consumeBytes reader send length
 
 
 let copyBytes zipIn zipOut length =
@@ -389,6 +403,9 @@ type ZipFileStream(reader: BinaryReader, length: int64) =
     member this.CopyTo(zipfile) =
         this.CopyTo(zipWriter zipfile)
 
+    member this.Consume() =
+        consumeBytes reader (fun a b -> ()) <| uint32 (length - position)
+
 
 type ziprecord =
     | LocalFile of LocalFileHeader.t * ZipFileStream
@@ -413,8 +430,7 @@ let rec readRecords zipIn = seq {
 
 
 let writeRecords zipOut records =
-    let writeRecord =
-        function
+    let writeRecord = function
         | LocalFile (h, st) ->
             writeHeader zipOut (H_LocalFile h)
             st.CopyTo(zipOut)
