@@ -11,6 +11,18 @@ let UTF8 = Encoding.UTF8
 let ENCODING_FLAG_VALUE = 0x0800us  // 1 <<< 11
 
 
+let stringOfBytes (encoding: Encoding) bytes = encoding.GetString(bytes)
+let bytesOfString (encoding: Encoding) (str: string) =
+    encoding.GetBytes(match str with null -> "" | _ -> str)
+
+
+let decodeFilename flags filename =
+    let encoding =
+        if flags &&& ENCODING_FLAG_VALUE = ENCODING_FLAG_VALUE then UTF8
+        else IBM437
+    stringOfBytes encoding filename
+
+
 module LocalFileHeader =
     [<Literal>]
     let SIGNATURE = 0x04034b50u
@@ -82,6 +94,8 @@ module LocalFileHeader =
 
     let size h =
         30 + (int h.fnLength) + (int h.efLength)
+
+    let getFilename h = decodeFilename h.flags h.filename
 
 
 module CentralFileHeader =
@@ -189,6 +203,8 @@ module CentralFileHeader =
     let size h =
         46 + (int h.fnLength) + (int h.efLength) + (int h.fcLength)
 
+    let getFilename h = decodeFilename h.flags h.filename
+
 
 module CentralEndHeader =
     [<Literal>]
@@ -253,11 +269,6 @@ module CentralEndHeader =
 
     let size h =
         22 + (int h.zcLength)
-
-
-let stringOfBytes (encoding: Encoding) bytes = encoding.GetString(bytes)
-let bytesOfString (encoding: Encoding) (str: string) =
-    encoding.GetBytes(match str with null -> "" | _ -> str)
 
 
 type t = {
