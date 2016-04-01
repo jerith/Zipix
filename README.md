@@ -9,14 +9,24 @@ All directories get `drwxr-xr-x` permissions, files matching any of a set of
 "executable patterns" get `-rwxr-xr-x` permissions, and other files get
 `-rw-r--r--` permissions.
 
+
 ## status
 
-Unfinished.
+Works On My Machine(tm)
 
 At the moment, I have an implementation of a subset of the
 [documented zipfile format](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT)
-that successfully reads the most common records headers and copies them
-unmodified to a new file.
+that successfully reads and writes the most common records headers and a set of
+record processors that will set the relevant unix permission header fields.
+This is wrapped up in a command line tool that will read a zipfile, process it,
+and write to a new file.
+
+
+## usage
+
+
+    Zipix.exe -i foo.zip -o bar.zip --exec-suffix .x86 --exec-dir bin
+
 
 ## license
 
