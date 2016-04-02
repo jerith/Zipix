@@ -1,6 +1,6 @@
 build:
   project: Zipix.sln
-  verbosity: detailed
+  # verbosity: detailed
 
 before_build:
   - nuget restore
