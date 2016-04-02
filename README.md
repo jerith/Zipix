@@ -1,7 +1,7 @@
 # Zipix
 
-[![AppVeyor status](https://img.shields.io/appveyor/ci/jerith/Zipix/master.svg)](https://ci.appveyor.com/project/jerith/zipix/history)
-[![Travis status](https://img.shields.io/travis/jerith/Zipix/master.svg)](https://travis-ci.org/jerith/Zipix/builds)
+[![Travis status](https://travis-ci.org/jerith/Zipix.svg?branch=master)](https://travis-ci.org/jerith/Zipix/builds)
+[![AppVeyor status](https://ci.appveyor.com/api/projects/status/github/jerith/Zipix?branch=master&svg=true)](https://ci.appveyor.com/project/jerith/zipix/history)
 
 Zipix is a tool to set unix permissions in a zipfile. Specifically, it sets the
 execute bits on certain files so that cross-platform software with unix
