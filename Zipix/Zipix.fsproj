@@ -53,4 +53,16 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+
+  <Target Name="AfterBuild">
+    <ItemGroup>
+      <InputAssemblies Include="$(OutputPath)\$(AssemblyName).exe" />
+      <InputAssemblies Include="$(OutputPath)\*.dll" />
+    </ItemGroup>
+    <PropertyGroup>
+      <Cmd Condition="('$(OS)' == 'Windows_NT')">..\packages\ILRepack.2.0.10\tools\ILRepack.exe</Cmd>
+      <Cmd Condition="('$(OS)' != 'Windows_NT')">mono ..\packages\ILRepack.2.0.10\tools\ILRepack.exe</Cmd>
+    </PropertyGroup>
+    <Exec Command="$(Cmd) /out:$(OutputPath)Zipix.exe @(InputAssemblies, ' ')" />
+  </Target>
 </Project>

@@ -4,6 +4,7 @@ build:
 
 before_build:
   - nuget restore
+  - nuget install ILRepack -o packages
 
 after_build:
   - copy packages\NUnit.2.6.4\lib\nunit.framework.dll ZipixTest\bin\Debug\
