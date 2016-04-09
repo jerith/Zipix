@@ -14,3 +14,16 @@ test_script:
 
 artifacts:
   - path: Zipix\bin\Debug\ZipixStandalone.exe
+
+deploy:
+  release: Zipix-$(appveyor_build_version)
+  description: 'Zipix'
+  provider: GitHub
+  auth_token:
+    secure: Cr4ySNF6d3mWzpoIE0oPvB6tMjVEClDvFUguDWdM9RejgJqyRFXh16ZATPCufU8Q
+  artifact: Zipix\bin\Debug\ZipixStandalone.exe
+  draft: false
+  prerelease: false
+  on:
+    branch: master
+    appveyor_repo_tag: true
