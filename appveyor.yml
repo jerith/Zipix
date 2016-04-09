@@ -2,6 +2,10 @@ build:
   project: Zipix.sln
   # verbosity: detailed
 
+# If we build on tags, the tags added by releases also trigger builds and
+# releases and infinite loop.
+skip_tags: true
+
 before_build:
   - nuget restore
   - nuget install ilmerge -Version 2.14.1208 -o packages
@@ -26,4 +30,3 @@ deploy:
   prerelease: false
   on:
     branch: master
-    appveyor_repo_tag: true
