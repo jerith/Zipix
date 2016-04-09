@@ -11,3 +11,6 @@ after_build:
 
 test_script:
   - nunit-console /framework:net-4.5 ZipixTest\bin\Debug\ZipixTest.dll
+
+artifacts:
+  - Zipix\bin\$(configuration)\ZipixStandalone.exe
