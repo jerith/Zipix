@@ -60,9 +60,9 @@
       <InputAssemblies Include="$(OutputPath)\*.dll" />
     </ItemGroup>
     <PropertyGroup>
-      <Cmd Condition="('$(OS)' == 'Windows_NT')">..\packages\ILRepack.2.0.10\tools\ILRepack.exe</Cmd>
+      <Cmd Condition="('$(OS)' == 'Windows_NT')">..\packages\ilmerge.2.14.1208\tools\ILMerge.exe</Cmd>
       <Cmd Condition="('$(OS)' != 'Windows_NT')">mono ..\packages\ILRepack.2.0.10\tools\ILRepack.exe</Cmd>
     </PropertyGroup>
-    <Exec Command="$(Cmd) /out:$(OutputPath)Zipix.exe @(InputAssemblies, ' ')" />
+    <Exec Command="$(Cmd) /out:$(OutputPath)ZipixStandalone.exe @(InputAssemblies, ' ')" />
   </Target>
 </Project>

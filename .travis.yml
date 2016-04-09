@@ -2,7 +2,7 @@ language: csharp
 solution: Zipix.sln
 
 before_script:
-  - nuget install ILRepack -o packages
+  - nuget install ILRepack -Version 2.0.10 -o packages
 
 script:
   - xbuild /nologo
