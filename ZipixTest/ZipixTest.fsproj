@@ -69,7 +69,7 @@
     <Compile Include="TestZipMangler.fs" />
     <Compile Include="FsCheckAddin.fs" />
   </ItemGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.1\Framework\v4.0\Microsoft.FSharp.Targets" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\4.0\Framework\v4.0\Microsoft.FSharp.Targets" />
   <ItemGroup>
     <ProjectReference Include="..\Zipix\Zipix.fsproj">
       <Project>{C81F3C96-7618-44C9-A1F6-420CB3D76E26}</Project>
