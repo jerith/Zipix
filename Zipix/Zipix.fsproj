@@ -49,10 +49,18 @@
     <Compile Include="ZipMangler.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.1\Framework\v4.0\Microsoft.FSharp.Targets" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\4.0\Framework\v4.0\Microsoft.FSharp.Targets" />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+
+  <Target Name="BeforeBuild">
+    <PropertyGroup>
+      <Pkg Condition="('$(OS)' == 'Windows_NT')">ilmerge -Version 2.14.1208</Pkg>
+      <Pkg Condition="('$(OS)' != 'Windows_NT')">ILRepack -Version 2.0.10</Pkg>
+    </PropertyGroup>
+    <Exec Command="nuget install -o ..\packages $(Pkg)" />
+  </Target>
 
   <Target Name="AfterBuild">
     <ItemGroup>
